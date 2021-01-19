@@ -2,8 +2,8 @@ import React from 'react'
 import {StyleSheet, View, Text, ActivityIndicator} from "react-native"
 import {Overlay} from "react-native-elements"
 
-export default (Loading) => {
-    const {isVisible, Text} = props
+export default function Loading(props) {
+    const {isVisible, text} = props
     return(
         <Overlay
             isVisible={isVisible}
@@ -31,6 +31,6 @@ const styles = StyleSheet.create({
     view:{
         flex: 1,
         alignItems: "center",
-        justifyContent: "center,"
+        justifyContent: "center",
     }
 })

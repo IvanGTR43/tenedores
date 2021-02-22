@@ -2,15 +2,65 @@ import React, {useState} from 'react'
 import {StyleSheet ,View, Text } from "react-native"
 import { Input, Icon, Button } from 'react-native-elements'
 import { onChange } from 'react-native-reanimated'
+import { validationEmail } from "../../utils/validations"
+import { size, isEmpty } from "lodash"
+import * as firebase from "firebase"
+import {useNavigation} from "@react-navigation/native"
+import Loading from "../Loading"
 
-export default (RegisterForm) => {
+
+
+export default function RegisterForm(props) {
+
+    const {toastRef} = props
 
     const [showPassword, setshowPassword] = useState(false)
     const [showPassword2, setshowPassword2] = useState(false)
+    const [loading, setloading] = useState(false)
     const [formData, setformData] = useState(defaultValue())
 
+    const navigation = useNavigation()
+
+    //Enviar lod Datos del Formulario
     const onSubmit = () => {
-        console.log(formData);
+
+        if(isEmpty(formData.email) ||
+            isEmpty(formData.password) ||
+            isEmpty(formData.repeatPassword)){
+                //console.log("Todos los Campos son Obligatorios");
+                toastRef.current.show("Todos Los Campos son Obligatorios")
+        }
+        else if(validationEmail(formData.email) == false){
+            //console.log("El email no esta escrito correctamente")
+            toastRef.current.show("El email No esta escrito correctamente")
+        }
+        else if(formData.password !== formData.repeatPassword){
+            //console.log("las contraseñas tienen que ser iguales Iguales");
+            toastRef.current.show("Las constraseñas tienen que ser Iguales")
+        }
+        else if(size(formData.password) <= 5){
+            //console.log("La constaseña debe tener al menos 6 caracteres")
+            toastRef.current.show("La contraseña debe tener al menos 6 caracteres")
+        }
+        else{
+            //console.log("Todo Bien");
+            setloading(true)
+            firebase.auth().createUserWithEmailAndPassword(formData.email, formData.password)
+            .then(response => {
+                setloading(false)
+                navigation.navigate("account");
+            })
+            .catch(err => {
+                setloading(false)
+                toastRef.current.show("El email ya esta en uso" + err)
+                console.log(err)
+
+            })
+
+        }
+        // console.log(formData);
+        // console.log(validationEmail(formData.email))
+        // console.log(size(formData.password));
     }
 
     const onChange = (e, type) =>{
@@ -59,6 +109,9 @@ export default (RegisterForm) => {
                 containerStyle={styles.btnContainerStyles}
                 buttonStyle={styles.btnRegister}
                 onPress={onSubmit}/>
+            <Loading
+                isVisible={loading}
+                text="Creando Cuenta"/>
     </View>)
 }
 

@@ -2,13 +2,17 @@ import React, {useState} from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Input, Icon, Button } from "react-native-elements"
 import { isEmpty } from "lodash"
+import { useNavigation } from "@react-navigation/native";
 import * as firebase from "firebase"
 import { validationEmail } from "../../utils/validations"
+import Loading from "../Loading"
 
 export default function LoginForm(props){
     const [showPassword, setshowPassword] = useState(false)
     const [formData, setformData] = useState(defaultValue())
+    const [loading, setLoading] = useState(false)
     const {toastRef} = props
+    const navigation = useNavigation(true)
 
     const onChange = (e, type) => {
         setformData({...formData, [type]: e.nativeEvent.text})
@@ -22,11 +26,13 @@ export default function LoginForm(props){
             toastRef.current.show("El correo es inválido")
         }
         else{
+            setLoading(true)
             firebase.
             auth().
             signInWithEmailAndPassword(formData.email, formData.password).
             then(()=> {
-                toastRef.current.show("Entrando...")
+                setLoading(false)
+                navigation.navigate("account")
             }).
             catch(()=>{
                 toastRef.current.show("Email o Contraseña Incorrectos")
@@ -65,6 +71,7 @@ export default function LoginForm(props){
                 containerStyle={style.btnContainerLogin}
                 buttonStyle={style.btnLogin}
                 onPress={onSubmit}/>
+            <Loading isVisible={loading} text="Iniciando Sesión"/>
         </View>
     )
 }

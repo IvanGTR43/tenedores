@@ -1,9 +1,9 @@
 import React,{useState} from 'react'
 import { StyleSheet, View, Text } from 'react-native'
 import { Button, Input } from 'react-native-elements'
-import { onChange } from 'react-native-reanimated'
 import { size } from "lodash"
-
+import * as firebase from "firebase";
+import {reautenticate} from "../../utils/api"
 export default function ChangePassword(props) {
     const {setShowModal, toastRef, setReloadUserInfo} = props
     const [showPassword, setShowPassword] = useState(false)
@@ -14,9 +14,10 @@ export default function ChangePassword(props) {
     const onChange = (e, type) =>{
         setFormData({...formData, [type]: e.nativeEvent.text})
     }
-    const onSubmit = () => {
-        setIsLoading(true)
+    const onSubmit = async () => {
+        let isSetError = true
         setError({})
+        setIsLoading(true)
         if(!formData.password || !formData.newPassword || !formData.repeatNewPassword){
             errorTemp ={
                 password: !formData.password ? "La Contraseña no puede estar Vacia": "",
@@ -32,17 +33,35 @@ export default function ChangePassword(props) {
             }
         }
         else if(size(formData.newPassword < 6)){
-            console.log(6);
             errorTemp={
                 newPassword: "La Contraseña debe tener que ser mayor a 5 caracter",
                 repeatNewPassword: "La Contraseña debe tener que ser mayor a 5 caracter"
             }
         }
         else{
-            console.log("OK°°°");
+            await reautenticate(formData.password).then(async() => {
+                await firebase.auth()
+                .currentUser.updatePassword(formData.newPassword)
+                .then( () => {
+                    isSetError= false
+                    setShowModal(false)
+                    firebase.auth().signOut()
+                })
+                .catch(()=>{
+                    errorTemp={
+                        other: "Error al Actualizar la Contraseña"
+                    }
+                })
+                errorTemp={}
+                setIsLoading(false)
+            }).catch((err) => {
+                errorTemp={
+                    password: "La Contraseña No es la Correcta"
+                }
+                setIsLoading(false)
+            })
         }
-        setError(errorTemp)
-        setIsLoading(false)
+        isSetError && setError(errorTemp)
     }
     return(<View style={styles.view}>
             <Input
@@ -90,7 +109,7 @@ export default function ChangePassword(props) {
                 buttonStyle={styles.btn}
                 loading={isLoading}
                 onPress={onSubmit}/>
-            <Text>Passord</Text>
+            <Text>{console.error.other}</Text>
         </View>)
 }
 function defaultValue(){

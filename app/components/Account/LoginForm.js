@@ -36,6 +36,7 @@ export default function LoginForm(props){
             }).
             catch(()=>{
                 toastRef.current.show("Email o Contraseña Incorrectos")
+                setLoading(false)
             })
         }
 
@@ -102,7 +103,6 @@ const style = StyleSheet.create({
         backgroundColor: "#00a680"
     },
     iconRight:{
-        color: "#c1c1c1",
-
+        color: "#c1c1c1"
     }
 })

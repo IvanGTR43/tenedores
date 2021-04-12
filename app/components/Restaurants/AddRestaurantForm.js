@@ -1,12 +1,20 @@
 import React, {useEffect, useState} from 'react'
-import { StyleSheet, View,Text, ScrollView, Alert, Dimensions} from 'react-native'
+import { StyleSheet, View, ScrollView, Alert, Dimensions} from 'react-native'
 import { Icon, Avatar, Image, Button, Input } from 'react-native-elements'
 import * as Permissions from 'expo-permissions'
 import * as ImagePicker from "expo-image-picker"
 import { map, size, filter } from 'lodash'
 import * as Location from "expo-location"
 import MapView from "react-native-maps"
+import uuid from "random-uuid-v4"
+
 import Modal from "../Modal"
+import {firebaseApp} from "../../utils/firebase"
+import firebase from "firebase/app"
+import "firebase/storage"
+import "firebase/firestore"
+
+const db = firebase.firestore(firebaseApp)
 
 const widthScreen = Dimensions.get("window").width
 export default function AddRestaurantForm(props){
@@ -18,7 +26,6 @@ export default function AddRestaurantForm(props){
     const [imageSelected, setImageSelected] = useState([])
     const [isVisibleMap, setIsVisibleMap] = useState(false)
     const [locationRestaurant, setLocationRestaurant] = useState(null)
-
     const addRestaurant= () =>{
         if(!restaurantName || ! restaurantAddress || !restaurantDescription){
             toastRef.current.show("Todos los coampos son obligatorios")
@@ -29,9 +36,53 @@ export default function AddRestaurantForm(props){
             toastRef.current.show("Tienes que localiuzar el restaurante en el mapa")
         }
         else{
-            console.log("OK");
+            setIsLoading(true)
+            console.log("Datos Correctos");
+            uploadImageStorage().then(response =>{
+
+                db.collection("restaurants").add({
+                    name: restaurantName,
+                    adrress: restaurantAddress,
+                    description: restaurantDescription,
+                    location: locationRestaurant,
+                    images: response,
+                    rating: 0,
+                    ratingTotal: 0,
+                    quantityVoting: 0,
+                    createAt: new Date(),
+                    createBy: firebase.auth().currentUser.uid,
+                }).then(()=>{
+                    console.log("OK, se agrego a la BD");
+                    setIsLoading(false)
+                    navigation.navigate("restaurants")
+                }).catch(()=>{
+                    setIsLoading(false)
+                })
+            })
         }
     }
+
+    const uploadImageStorage = async() =>{
+        const imageBlob = []
+        await Promise.all(
+            map(imageSelected, async image => {
+                const response = await fetch(image)
+                const blob = await response.blob()
+                const ref = firebase.storage().ref("restaurants").child(uuid())
+                await ref.put(blob).then(async(result) => {
+                    await firebase.storage().ref(`restaurants/${result.metadata.name}`).
+                    getDownloadURL().then(photoURL =>{
+                        imageBlob.push(photoURL)
+                    })
+                }).catch((err)=>{
+                    setIsLoading(false)
+                    toastRef.current.show("No se pudo agregar a la Base de Datos")
+                })
+            })
+        )
+        return imageBlob
+    }
+
     return(
     <ScrollView
         style={styles.scrollView}>
@@ -50,8 +101,7 @@ export default function AddRestaurantForm(props){
             <Button
                 title="Crear Restaurante"
                 onPress={addRestaurant}
-                buttonStyle={styles.btnAddRestaurant}
-                loading={true}/>
+                buttonStyle={styles.btnAddRestaurant}/>
             <Map
                 isVisibleMap={isVisibleMap}
                 setIsVisibleMap={setIsVisibleMap}
@@ -184,7 +234,6 @@ function UploadImage(props){
             }
             else{
                 setImageSelected([...imageSelected, result.uri])
-                console.log(imageSelected);
             }
         }
     }

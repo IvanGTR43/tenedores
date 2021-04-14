@@ -9,6 +9,7 @@ export default function AddRestaurant(props){
     const {navigation} = props
     const toastRef = useRef()
     const [isLoading, setIsLoading] = useState(false)
+    console.log("hola mundo")
     return(
         <View>
             <AddRestaurantForm

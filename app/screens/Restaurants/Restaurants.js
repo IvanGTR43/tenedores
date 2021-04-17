@@ -1,6 +1,7 @@
-import React,{useState, useEffect} from 'react'
+import React,{useState, useEffect, useCallback} from 'react'
 import {StyleSheet, View, Text} from "react-native"
 import { Icon } from 'react-native-elements'
+import { useFocusEffect } from "@react-navigation/native";
 import {firebaseApp} from "../../utils/firebase"
 import firebase from "firebase/app"
 import "firebase/firestore"
@@ -14,35 +15,69 @@ export default function Restaurants(props){
     const [restaurants, setRestaurants] = useState({})
     const [totalRestaurantes, setTotalRestaurantes] = useState(0)
     const [startRestaurant, setStartRestaurant] = useState(null)
+    const [isLoading, setIsLoading] = useState(false)
     const limitRestaurants = 10
+
     useEffect(() => {
         firebase.auth().onAuthStateChanged((userInfo)=>{
             //console.log(userInfo);
             setUser(userInfo)
         })
     }, [])
-    useEffect(() => {
-        db.collection("restaurants").get().then((snap) =>{
-            setTotalRestaurantes(snap.size)
-        }).catch((err)=>{
-            console.log("No jalo");
-        })
-        const resultRestaurant = []
-        db.collection("restaurants").orderBy("createAt", "desc").limit(limitRestaurants).get().then((response) =>{
-            setStartRestaurant(response.docs[response.docs.length -1])
-            response.forEach((doc) =>{
+
+    useFocusEffect(
+        useCallback(() => {
+            db.collection("restaurants").get().then((snap) =>{
+                setTotalRestaurantes(snap.size)
+            }).catch((err)=>{
+                console.log("No jalo");
+            })
+            const resultRestaurant = []
+            db.collection("restaurants")
+                .orderBy("createAt", "desc")
+                .limit(limitRestaurants)
+                .get()
+                .then((response) =>{
+                setStartRestaurant(response.docs[response.docs.length -1])
+                response.forEach((doc) =>{
+                    const restaurant = doc.data()
+                    restaurant.id = doc.id
+                    resultRestaurant.push(restaurant)
+                })
+                setRestaurants(resultRestaurant)
+            })
+        }, [])
+    )
+
+
+    const handleLoadMore=()=>{
+        const resultRestaurant=[]
+        restaurants.length < totalRestaurantes && setIsLoading(true)
+        db.collection("restaurants").orderBy("createAt", "desc").startAfter(startRestaurant.data().createAt)
+        .limit(limitRestaurants)
+        .get()
+        .then(response=>{
+            if(response.docs.length > 0){
+                setStartRestaurant(response.docs[response.docs.length -1])
+            }
+            else{
+                setIsLoading(false)
+            }
+            response.forEach((doc)=>{
                 const restaurant = doc.data()
-                restaurant.id = doc.id
+                restaurant.id=doc.id
                 resultRestaurant.push(restaurant)
             })
-            setRestaurants(resultRestaurant)
-        })
-    }, [])
+            setRestaurants([...restaurants, ...resultRestaurant])
+        }).catch(()=> console.log("no llegasn las imagens"))
+    }
     return(
         <View
             style={styles.viewBody}>
             <ListRestaurants
-                restaurants={restaurants}/>
+                restaurants={restaurants}
+                handleLoadMore={handleLoadMore}
+                isLoading={isLoading}/>
             {user && (
                 <Icon
                     name="plus"

@@ -14,6 +14,11 @@ export default function LoginForm(props){
     const {toastRef} = props
     const navigation = useNavigation(true)
 
+    firebase.auth().onAuthStateChanged((user)=> {
+        user && navigation.navigate("account")
+        }
+    )
+
     const onChange = (e, type) => {
         setformData({...formData, [type]: e.nativeEvent.text})
     }
@@ -32,7 +37,7 @@ export default function LoginForm(props){
             signInWithEmailAndPassword(formData.email, formData.password).
             then(()=> {
                 setLoading(false)
-                navigation.navigate("account")
+                navigation.goBack()
             }).
             catch(()=>{
                 toastRef.current.show("Email o Contraseña Incorrectos")
